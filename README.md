@@ -1,71 +1,79 @@
-#BrassiWood analysis pipeline
-Code accompanying
+# BrassiWood analysis pipeline
 
-Hendriks, K.P. et al. (2026)
+## Overview
 
-Why woodiness repeatedly evolves—and disappears
+This repository contains the scripts used to generate the analyses and figures presented in:
 
-Nature (submitted)
+**Hendriks, K.P. *et al.* (2026)**
+**Why woodiness repeatedly evolves—and disappears**
+*Nature* (submitted)
 
-Overview
+The workflow reproduces the principal analyses presented in the manuscript, including phylogenomic inference, ancestral-state reconstruction, environmental niche analyses, phylogenetic comparative analyses, and the generation of publication-quality figures.
 
-This repository contains the scripts used to generate the analyses and figures presented in the manuscript.
+---
 
-The workflow includes:
+## Repository structure
 
-phylogenomic data processing
-ancestral-state reconstruction
-diversification and transition analyses
-environmental niche analyses
-phylogenetic comparative analyses
-generation of publication-quality figures
-Repository structure
-scripts/           analysis scripts
-config/            configuration files
-input/             example input files
-output/            example output files
-figures/           publication figures
+```text
+scripts/            Analysis scripts
+config/             Configuration files
+input/              Example input files
+output/             Example output files
+figures/            Publication figures
+```
 
-(adjust to your actual structure)
+*(Adjust the directory names above to match the actual repository structure.)*
 
-Software requirements
+---
 
-The analyses use a combination of
+## Software requirements
 
-R
-Python
-Bash
-IQ-TREE
-ASTRAL
-HybPiper
-BayesTraits
-BEAST
-TreeAnnotator
+The workflow relies on a combination of:
 
-(whatever actually applies)
+* Bash
+* R
+* Python
+* HybPiper
+* IQ-TREE
+* ASTRAL
+* BayesTraits
+* BEAST
+* TreeAnnotator
 
-Data availability
+Additional package dependencies are documented within the individual scripts.
 
-Input datasets are available through the accompanying publication and associated repositories. Large sequencing datasets are not included in this repository.
+---
 
-Citation
+## Data availability
+
+Large sequencing datasets are not included in this repository.
+
+The datasets used in this study are available through the associated publication and the repositories cited therein.
+
+---
+
+## Citation
 
 If you use this repository, please cite:
 
-Hendriks KP et al. (2026)
+> Hendriks, K.P. *et al.* (2026).
+> *Why woodiness repeatedly evolves—and disappears.*
+> *Nature.*
 
-Why woodiness repeatedly evolves—and disappears.
+Please also cite the archived Zenodo release associated with the version used.
 
-Nature.
+---
 
-Zenodo DOI:
+## License
 
-(added after release)
+This repository is distributed under the MIT License. See the `LICENSE` file for details.
 
-Contact
+---
 
-Kasper P. Hendriks
+## Contact
 
+**Kasper P. Hendriks**
 Naturalis Biodiversity Center
-
 Leiden, The Netherlands
+
+Email: [k.p.hendriks@gmail.com](mailto:k.p.hendriks@gmail.com)
