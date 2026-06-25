@@ -33,16 +33,7 @@ BrassiWood-analysis/
 
 ```
 
-BrassiWood-analysis/
-├── scripts/          Analysis scripts
-├── config/           Configuration files
-├── documentation/    Workflow documentation
-├── example_data/     Small example datasets
-├── figures/          Publication figures
-├── LICENSE
-└── README.md
 
-*(Adjust the directory names above to match the actual repository structure.)*
 
 ---
 
