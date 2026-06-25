@@ -69,7 +69,6 @@ If you use this repository, please cite:
 
 > Hendriks, K.P. *et al.* (2026).
 > *Why woodiness repeatedly evolves—and disappears.*
-> *Nature.*
 
 Please also cite the archived Zenodo release associated with the version used.
 
