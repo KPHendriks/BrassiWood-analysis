@@ -6,7 +6,7 @@ This repository contains the scripts used to generate the analyses and figures p
 
 **Hendriks, K.P. *et al.* (2026)**
 **Why woodiness repeatedly evolves—and disappears**
-*Nature* (submitted)
+(submitted)
 
 The workflow reproduces the principal analyses presented in the manuscript, including phylogenomic inference, ancestral-state reconstruction, environmental niche analyses, phylogenetic comparative analyses, and the generation of publication-quality figures.
 
@@ -15,12 +15,36 @@ The workflow reproduces the principal analyses presented in the manuscript, incl
 ## Repository structure
 
 ```text
-scripts/            Analysis scripts
-config/             Configuration files
-input/              Example input files
+
+BrassiWood-analysis/
+├── scripts/          Analysis scripts
+├── config/           Configuration files
+├── documentation/    Workflow documentation
+├── example_data/     Small example datasets
+├── figures/          Publication figures
+├── LICENSE
+└── README.md
+
+
+
+WP1_BrassiToL/
+WP1_BrassiToL/scripts/            Analysis scripts
+WP1_BrassiToL/data/               Input data
+WP1_BrassiToL/results_intermediate/
+WP1_BrassiToL/results_final/
+
 output/             Example output files
 figures/            Publication figures
 ```
+
+BrassiWood-analysis/
+├── scripts/          Analysis scripts
+├── config/           Configuration files
+├── documentation/    Workflow documentation
+├── example_data/     Small example datasets
+├── figures/          Publication figures
+├── LICENSE
+└── README.md
 
 *(Adjust the directory names above to match the actual repository structure.)*
 
