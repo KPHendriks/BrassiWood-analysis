@@ -17,24 +17,20 @@ The workflow reproduces the principal analyses presented in the manuscript, incl
 ```text
 
 BrassiWood-analysis/
-├── scripts/          Analysis scripts
-├── config/           Configuration files
-├── documentation/    Workflow documentation
-├── example_data/     Small example datasets
-├── figures/          Publication figures
+
+├── WP1_BrassiToL/                                   Directory to create the Brassicaceae Tree of Life
+    ├── WP1_BrassiToL/scripts/                       All scripts
+    ├── WP1_BrassiToL/data/                          Required data
+    ├── WP1_BrassiToL/results_intermediate/          Intermediate results
+    ├── WP1_BrassiToL/results_final/                 Final results for publication
+├── WP2_BrassiNiche/                                 Directory to analyse the growth form niches of woody and herbaceous Brassicaceae
+    ├── WP1_BrassiToL/scripts/                       All scripts
+    ├── WP1_BrassiToL/data/                          Required data
+    ├── WP1_BrassiToL/results_intermediate/          Intermediate results
+    ├── WP1_BrassiToL/results_final/                 Final results for publication
 ├── LICENSE
 └── README.md
 
-
-
-WP1_BrassiToL/
-WP1_BrassiToL/scripts/            Analysis scripts
-WP1_BrassiToL/data/               Input data
-WP1_BrassiToL/results_intermediate/
-WP1_BrassiToL/results_final/
-
-output/             Example output files
-figures/            Publication figures
 ```
 
 BrassiWood-analysis/
