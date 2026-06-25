@@ -86,4 +86,4 @@ This repository is distributed under the MIT License. See the `LICENSE` file for
 Naturalis Biodiversity Center
 Leiden, The Netherlands
 
-Email: [k.p.hendriks@gmail.com](mailto:k.p.hendriks@gmail.com)
+Email: [kasper.hendriks@naturalis.nl](mailto:kasper.hendriks@naturalis.nl)
