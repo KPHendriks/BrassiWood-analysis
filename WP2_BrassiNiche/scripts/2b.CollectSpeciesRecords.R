@@ -1119,8 +1119,6 @@ suppressPackageStartupMessages({
   library(tools)
 })
 
-setwd("~/Google Drive/My Drive/Publications/2026_Hendriks_et_al_BrassiWood/BrassiWood")
-
 in_dir <- "WP2_BrassiNiche/results_intermediate/species_occurrence_records_tables"
 
 out_all_csv     <- "WP2_BrassiNiche/results_intermediate/all_gbifIDs_by_file.csv"
