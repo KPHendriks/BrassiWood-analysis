@@ -6,9 +6,6 @@
 
 ## STEP 0: PREPARE -----
 
-wd <- "~/Google Drive/My Drive/Publications/2026_Hendriks_et_al_BrassiWood/BrassiWood/"
-setwd(wd)
-
 out_dir <- "WP2_BrassiNiche/results_final/0_introduction_and_overview"
 dir.create(out_dir, recursive = TRUE, showWarnings = FALSE)
 
