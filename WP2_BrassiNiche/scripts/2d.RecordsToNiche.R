@@ -161,7 +161,11 @@ if (file.exists(ratings_csv)) {
     dplyr::transmute(
       gbifID = as.character(gbifID),
       rating = tolower(as.character(rating)),
-      timestamp_iso = as.POSIXct(timestamp_iso, tz = "UTC")
+      timestamp_iso = as.POSIXct(
+  sub("([+-][0-9]{2}):([0-9]{2})$", "\\1\\2", timestamp_iso),
+  format = "%Y-%m-%dT%H:%M:%S%z",
+  tz = "UTC"
+)
     ) %>%
     dplyr::filter(!is.na(gbifID), gbifID != "") %>%
     dplyr::arrange(gbifID, timestamp_iso) %>%
