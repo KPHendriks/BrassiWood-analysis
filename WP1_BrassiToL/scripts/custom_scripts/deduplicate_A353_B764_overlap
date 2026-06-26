@@ -1,0 +1,623 @@
+#!/usr/bin/env python3
+"""
+deduplicate_A353_B764_overlap.py
+
+Post-1c deduplication of loci that occur in BOTH the A353 and B764 bait sets.
+
+What this script does
+---------------------
+1. Reads the cleaned sequence-list output folder created by 1c:
+     <seq_root>/
+       loci_consensus/
+       loci_contigs/
+       samples_consensus/
+       samples_contigs/
+
+2. For each predefined overlapping A353/B764 gene pair:
+     - inspects the cleaned locus FASTAs
+     - summarizes recovery statistics for both versions:
+         * number of sequences recovered
+         * mean sequence length
+         * total recovered bp
+       separately for consensus and contigs
+
+3. Chooses which version to keep and which to remove.
+   Updated decision rule:
+     a) compare n_consensus
+        - if absolute difference >= --min_diff_n_consensus, keep higher n_consensus
+     b) otherwise compare mean_len_consensus
+     c) if tie: compare total_bp_consensus
+     d) if tie: compare n_contig
+        - if absolute difference >= --min_diff_n_contig, keep higher n_contig
+     e) if tie: compare mean_len_contig
+     f) if tie: compare total_bp_contig
+     g) if still tie: use --prefer_on_tie
+
+4. Removes the losing locus from:
+     - loci_consensus/    (whole FASTA file; moved to backup)
+     - loci_contigs/      (whole FASTA file; moved to backup)
+     - samples_consensus/ (remove relevant records from all sample FASTAs)
+     - samples_contigs/   (remove relevant records from all sample FASTAs)
+
+5. Writes output summary files in <seq_root>/:
+     - bait_overlap_deduplication_stats.csv
+     - bait_overlap_deduplication_summary.txt
+
+Notes
+-----
+- Intended for target_id_mode = dash, where:
+    B764 loci look like 1G08490, 2G31955, ...
+    A353 loci look like 5018, 4932, ...
+- Safe mode:
+    * locus FASTAs are MOVED to a backup folder
+    * affected sample FASTAs are backed up before rewriting
+"""
+
+import argparse
+import csv
+import shutil
+import sys
+from pathlib import Path
+from typing import Dict, List, Tuple, Set
+
+from Bio import SeqIO
+from Bio.SeqRecord import SeqRecord
+from Bio.SeqIO.FastaIO import FastaWriter
+
+
+# ------------------------------------------------------------------
+# Overlap pairs: A353 locus ID -> B764 locus ID
+# ------------------------------------------------------------------
+
+OVERLAP_PAIRS = {
+    "4932": "2G31955",
+    "5018": "1G08490",
+    "5138": "5G61770",
+    "5257": "1G43860",
+    "5264": "5G67530",
+    "5333": "5G13680",
+    "5398": "3G20780",
+    "5406": "1G03190",
+    "5426": "1G49540",
+    "5449": "1G55880",
+    "5528": "1G17760",
+    "5596": "4G29380",
+    "5599": "3G51050",
+    "5664": "1G07010",
+    "5670": "2G39090",
+    "5699": "5G17290",
+    "5859": "4G29830",
+    "5921": "5G48600",
+    "5922": "3G12080",
+    "6016": "3G08650",
+    "6041": "3G53760",
+    "6051": "3G02660",
+    "6098": "1G31780",
+    "6139": "1G75330",
+    "6175": "5G06830",
+    "6176": "5G64050",
+    "6221": "3G06950",
+    "6295": "4G33030",
+    "6373": "5G48470",
+    "6383": "3G48500",
+    "6450": "5G10920",
+    "6487": "5G14760",
+    "6533": "5G46180",
+    "6572": "2G21280",
+    "6717": "5G18570",
+    "6961": "4G02790",
+}
+
+
+# ------------------------------------------------------------------
+# Helpers
+# ------------------------------------------------------------------
+
+def ensure_dir(p: Path):
+    p.mkdir(parents=True, exist_ok=True)
+
+
+def fasta_writer_unwrapped(path: Path, records: List[SeqRecord]):
+    with open(path, "w") as handle:
+        writer = FastaWriter(handle, wrap=None)
+        writer.write_file(records)
+
+
+def infer_locus_from_record_id(rec_id: str) -> str:
+    """
+    For per-sample FASTAs written by 1c, IDs are expected to be:
+      <sample>-<locus>
+    We take the part after the final hyphen.
+    """
+    rid = rec_id.split()[0]
+    if "-" in rid:
+        return rid.rsplit("-", 1)[-1]
+    return rid
+
+
+def read_fasta_lengths(fp: Path) -> List[int]:
+    if not fp.exists():
+        return []
+    return [len(rec.seq) for rec in SeqIO.parse(str(fp), "fasta")]
+
+
+def summarize_lengths(lengths: List[int]) -> Tuple[int, float, int]:
+    if not lengths:
+        return (0, 0.0, 0)
+    n = len(lengths)
+    total_bp = sum(lengths)
+    mean_len = total_bp / n
+    return (n, mean_len, total_bp)
+
+
+def compare_numeric(a: float, b: float, label_a: str, label_b: str, metric: str) -> Tuple[str, str]:
+    """
+    Returns (winner_label, reason) or ("", "") if equal.
+    """
+    if a > b:
+        return label_a, f"{label_a}_higher_{metric}"
+    if b > a:
+        return label_b, f"{label_b}_higher_{metric}"
+    return "", ""
+
+
+def choose_winner(
+    a353_stats: Dict[str, float],
+    b764_stats: Dict[str, float],
+    prefer_on_tie: str,
+    min_diff_n_consensus: int,
+    min_diff_n_contig: int
+) -> Tuple[str, str, str]:
+    """
+    Returns:
+      keep_set, remove_set, decision_reason
+
+    Updated rule:
+      1. n_consensus only decisive if difference >= min_diff_n_consensus
+      2. else mean_len_consensus
+      3. else total_bp_consensus
+      4. n_contig only decisive if difference >= min_diff_n_contig
+      5. else mean_len_contig
+      6. else total_bp_contig
+      7. else tie preference
+    """
+    diff_nc = abs(int(a353_stats["n_consensus"]) - int(b764_stats["n_consensus"]))
+    if diff_nc >= min_diff_n_consensus:
+        winner, reason = compare_numeric(
+            a353_stats["n_consensus"], b764_stats["n_consensus"],
+            "A353", "B764", "n_consensus"
+        )
+        if winner:
+            loser = "B764" if winner == "A353" else "A353"
+            return winner, loser, reason
+
+    winner, reason = compare_numeric(
+        a353_stats["mean_len_consensus"], b764_stats["mean_len_consensus"],
+        "A353", "B764", "mean_len_consensus"
+    )
+    if winner:
+        loser = "B764" if winner == "A353" else "A353"
+        return winner, loser, reason
+
+    winner, reason = compare_numeric(
+        a353_stats["total_bp_consensus"], b764_stats["total_bp_consensus"],
+        "A353", "B764", "total_bp_consensus"
+    )
+    if winner:
+        loser = "B764" if winner == "A353" else "A353"
+        return winner, loser, reason
+
+    diff_nt = abs(int(a353_stats["n_contig"]) - int(b764_stats["n_contig"]))
+    if diff_nt >= min_diff_n_contig:
+        winner, reason = compare_numeric(
+            a353_stats["n_contig"], b764_stats["n_contig"],
+            "A353", "B764", "n_contig"
+        )
+        if winner:
+            loser = "B764" if winner == "A353" else "A353"
+            return winner, loser, reason
+
+    winner, reason = compare_numeric(
+        a353_stats["mean_len_contig"], b764_stats["mean_len_contig"],
+        "A353", "B764", "mean_len_contig"
+    )
+    if winner:
+        loser = "B764" if winner == "A353" else "A353"
+        return winner, loser, reason
+
+    winner, reason = compare_numeric(
+        a353_stats["total_bp_contig"], b764_stats["total_bp_contig"],
+        "A353", "B764", "total_bp_contig"
+    )
+    if winner:
+        loser = "B764" if winner == "A353" else "A353"
+        return winner, loser, reason
+
+    loser = "A353" if prefer_on_tie == "B764" else "B764"
+    return prefer_on_tie, loser, f"{prefer_on_tie}_tie_preference"
+
+
+def remove_locus_fasta_if_present(src: Path, backup_dir: Path, dry_run: bool) -> bool:
+    """
+    Returns True if a file existed and would be / was moved.
+    """
+    if not src.exists():
+        return False
+    ensure_dir(backup_dir)
+    dst = backup_dir / src.name
+    if dry_run:
+        print(f"[DRY-RUN] Would move {src} -> {dst}")
+        return True
+    shutil.move(str(src), str(dst))
+    return True
+
+
+def filter_sample_fasta_in_place(
+    fasta_path: Path,
+    loci_to_remove: Set[str],
+    backup_root: Path,
+    dry_run: bool
+) -> Tuple[int, int]:
+    """
+    Returns:
+      n_before, n_removed
+    """
+    if not fasta_path.exists():
+        return (0, 0)
+
+    records = list(SeqIO.parse(str(fasta_path), "fasta"))
+    if not records:
+        return (0, 0)
+
+    kept = []
+    removed = 0
+    for rec in records:
+        locus = infer_locus_from_record_id(rec.id)
+        if locus in loci_to_remove:
+            removed += 1
+        else:
+            kept.append(rec)
+
+    if removed == 0:
+        return (len(records), 0)
+
+    ensure_dir(backup_root)
+    backup_path = backup_root / fasta_path.name
+
+    if dry_run:
+        print(f"[DRY-RUN] Would back up {fasta_path} -> {backup_path}")
+        print(f"[DRY-RUN] Would rewrite {fasta_path} removing {removed} record(s)")
+        return (len(records), removed)
+
+    shutil.copy2(str(fasta_path), str(backup_path))
+    fasta_writer_unwrapped(fasta_path, kept)
+    return (len(records), removed)
+
+
+# ------------------------------------------------------------------
+# Main
+# ------------------------------------------------------------------
+
+def main():
+    ap = argparse.ArgumentParser(description="Deduplicate overlapping A353/B764 loci after 1c.")
+    ap.add_argument(
+        "--seq_root",
+        required=True,
+        type=Path,
+        help="Path to 03_sequence_lists_nuclear (or equivalent) produced by 1c"
+    )
+    ap.add_argument(
+        "--prefer_on_tie",
+        choices=["A353", "B764"],
+        default="B764",
+        help="Which bait-set version to keep on a perfect tie"
+    )
+    ap.add_argument(
+        "--min_diff_n_consensus",
+        type=int,
+        default=50,
+        help="Minimum absolute difference in n_consensus needed before n_consensus is allowed to decide the winner"
+    )
+    ap.add_argument(
+        "--min_diff_n_contig",
+        type=int,
+        default=50,
+        help="Minimum absolute difference in n_contig needed before n_contig is allowed to decide the winner"
+    )
+    ap.add_argument(
+        "--dry_run",
+        action="store_true",
+        help="Preview actions without modifying files"
+    )
+    args = ap.parse_args()
+
+    seq_root = args.seq_root
+    loci_consensus_dir = seq_root / "loci_consensus"
+    loci_contigs_dir = seq_root / "loci_contigs"
+    samples_consensus_dir = seq_root / "samples_consensus"
+    samples_contigs_dir = seq_root / "samples_contigs"
+
+    for req in [loci_consensus_dir, samples_consensus_dir]:
+        if not req.exists():
+            sys.exit(f"[FATAL] Required folder not found: {req}")
+
+    backup_root = seq_root / "_dedup_overlap_backups"
+    backup_loci_cons = backup_root / "loci_consensus_removed"
+    backup_loci_cont = backup_root / "loci_contigs_removed"
+    backup_samp_cons = backup_root / "samples_consensus_originals"
+    backup_samp_cont = backup_root / "samples_contigs_originals"
+
+    stats_rows = []
+    loci_to_remove = set()
+
+    pairs_with_both_consensus = 0
+    pairs_with_both_contigs = 0
+    pairs_only_a353_present = 0
+    pairs_only_b764_present = 0
+    pairs_neither_present = 0
+
+    print("[INFO] Scoring overlapping A353/B764 locus pairs ...")
+
+    for a353_locus, b764_locus in OVERLAP_PAIRS.items():
+        a_cons_fp = loci_consensus_dir / f"{a353_locus}_consensus.fasta"
+        b_cons_fp = loci_consensus_dir / f"{b764_locus}_consensus.fasta"
+        a_cont_fp = loci_contigs_dir / f"{a353_locus}_contig.fasta"
+        b_cont_fp = loci_contigs_dir / f"{b764_locus}_contig.fasta"
+
+        a_cons_exists = a_cons_fp.exists()
+        b_cons_exists = b_cons_fp.exists()
+        a_cont_exists = a_cont_fp.exists()
+        b_cont_exists = b_cont_fp.exists()
+
+        if a_cons_exists and b_cons_exists:
+            pairs_with_both_consensus += 1
+        if a_cont_exists and b_cont_exists:
+            pairs_with_both_contigs += 1
+
+        if (a_cons_exists or a_cont_exists) and not (b_cons_exists or b_cont_exists):
+            pairs_only_a353_present += 1
+        elif (b_cons_exists or b_cont_exists) and not (a_cons_exists or a_cont_exists):
+            pairs_only_b764_present += 1
+        elif not (a_cons_exists or a_cont_exists) and not (b_cons_exists or b_cont_exists):
+            pairs_neither_present += 1
+
+        a_cons_lengths = read_fasta_lengths(a_cons_fp)
+        b_cons_lengths = read_fasta_lengths(b_cons_fp)
+        a_cont_lengths = read_fasta_lengths(a_cont_fp)
+        b_cont_lengths = read_fasta_lengths(b_cont_fp)
+
+        a_n_cons, a_mean_cons, a_total_cons = summarize_lengths(a_cons_lengths)
+        b_n_cons, b_mean_cons, b_total_cons = summarize_lengths(b_cons_lengths)
+        a_n_cont, a_mean_cont, a_total_cont = summarize_lengths(a_cont_lengths)
+        b_n_cont, b_mean_cont, b_total_cont = summarize_lengths(b_cont_lengths)
+
+        a_stats = {
+            "n_consensus": a_n_cons,
+            "mean_len_consensus": a_mean_cons,
+            "total_bp_consensus": a_total_cons,
+            "n_contig": a_n_cont,
+            "mean_len_contig": a_mean_cont,
+            "total_bp_contig": a_total_cont,
+        }
+        b_stats = {
+            "n_consensus": b_n_cons,
+            "mean_len_consensus": b_mean_cons,
+            "total_bp_consensus": b_total_cons,
+            "n_contig": b_n_cont,
+            "mean_len_contig": b_mean_cont,
+            "total_bp_contig": b_total_cont,
+        }
+
+        keep_set, remove_set, reason = choose_winner(
+            a353_stats=a_stats,
+            b764_stats=b_stats,
+            prefer_on_tie=args.prefer_on_tie,
+            min_diff_n_consensus=args.min_diff_n_consensus,
+            min_diff_n_contig=args.min_diff_n_contig
+        )
+
+        keep_locus = a353_locus if keep_set == "A353" else b764_locus
+        remove_locus = b764_locus if remove_set == "B764" else a353_locus
+        loci_to_remove.add(remove_locus)
+
+        abs_diff_n_consensus = abs(a_n_cons - b_n_cons)
+        abs_diff_n_contig = abs(a_n_cont - b_n_cont)
+        recovery_ratio_b764_over_a353 = (b_n_cons / a_n_cons) if a_n_cons > 0 else ""
+
+        stats_rows.append({
+            "A353_locus": a353_locus,
+            "B764_locus": b764_locus,
+
+            "A353_consensus_exists": int(a_cons_exists),
+            "B764_consensus_exists": int(b_cons_exists),
+            "A353_contig_exists": int(a_cont_exists),
+            "B764_contig_exists": int(b_cont_exists),
+
+            "A353_n_consensus": a_n_cons,
+            "A353_mean_len_consensus": round(a_mean_cons, 3),
+            "A353_total_bp_consensus": a_total_cons,
+            "A353_n_contig": a_n_cont,
+            "A353_mean_len_contig": round(a_mean_cont, 3),
+            "A353_total_bp_contig": a_total_cont,
+
+            "B764_n_consensus": b_n_cons,
+            "B764_mean_len_consensus": round(b_mean_cons, 3),
+            "B764_total_bp_consensus": b_total_cons,
+            "B764_n_contig": b_n_cont,
+            "B764_mean_len_contig": round(b_mean_cont, 3),
+            "B764_total_bp_contig": b_total_cont,
+
+            "abs_diff_n_consensus": abs_diff_n_consensus,
+            "abs_diff_n_contig": abs_diff_n_contig,
+            "B764_over_A353_n_consensus_ratio": round(recovery_ratio_b764_over_a353, 4) if recovery_ratio_b764_over_a353 != "" else "",
+
+            "min_diff_n_consensus_used": args.min_diff_n_consensus,
+            "min_diff_n_contig_used": args.min_diff_n_contig,
+
+            "keep_set": keep_set,
+            "keep_locus": keep_locus,
+            "remove_set": remove_set,
+            "remove_locus": remove_locus,
+            "decision_reason": reason,
+        })
+
+    # ------------------------------------------------------------------
+    # Write stats CSV
+    # ------------------------------------------------------------------
+    out_csv = seq_root / "bait_overlap_deduplication_stats.csv"
+    if stats_rows:
+        fieldnames = list(stats_rows[0].keys())
+        if args.dry_run:
+            print(f"[DRY-RUN] Would write stats CSV: {out_csv}")
+        else:
+            with open(out_csv, "w", newline="") as handle:
+                writer = csv.DictWriter(handle, fieldnames=fieldnames)
+                writer.writeheader()
+                writer.writerows(stats_rows)
+
+    # ------------------------------------------------------------------
+    # Remove whole-locus FASTAs
+    # ------------------------------------------------------------------
+    print("[INFO] Removing losing locus FASTAs ...")
+
+    moved_locus_consensus = 0
+    moved_locus_contigs = 0
+
+    for row in stats_rows:
+        rem = row["remove_locus"]
+
+        rem_cons = loci_consensus_dir / f"{rem}_consensus.fasta"
+        rem_cont = loci_contigs_dir / f"{rem}_contig.fasta"
+
+        if remove_locus_fasta_if_present(rem_cons, backup_loci_cons, args.dry_run):
+            moved_locus_consensus += 1
+        if remove_locus_fasta_if_present(rem_cont, backup_loci_cont, args.dry_run):
+            moved_locus_contigs += 1
+
+    # ------------------------------------------------------------------
+    # Rewrite sample FASTAs
+    # ------------------------------------------------------------------
+    print("[INFO] Filtering per-sample FASTAs ...")
+
+    sample_cons_files = sorted(samples_consensus_dir.glob("*.fa*"))
+    sample_cont_files = sorted(samples_contigs_dir.glob("*.fa*")) if samples_contigs_dir.exists() else []
+
+    cons_files_changed = 0
+    cont_files_changed = 0
+    cons_records_removed = 0
+    cont_records_removed = 0
+
+    for fp in sample_cons_files:
+        _, n_removed = filter_sample_fasta_in_place(
+            fasta_path=fp,
+            loci_to_remove=loci_to_remove,
+            backup_root=backup_samp_cons,
+            dry_run=args.dry_run
+        )
+        if n_removed > 0:
+            cons_files_changed += 1
+            cons_records_removed += n_removed
+
+    for fp in sample_cont_files:
+        _, n_removed = filter_sample_fasta_in_place(
+            fasta_path=fp,
+            loci_to_remove=loci_to_remove,
+            backup_root=backup_samp_cont,
+            dry_run=args.dry_run
+        )
+        if n_removed > 0:
+            cont_files_changed += 1
+            cont_records_removed += n_removed
+
+    # ------------------------------------------------------------------
+    # Summaries from stats table
+    # ------------------------------------------------------------------
+    keep_a353 = sum(1 for r in stats_rows if r["keep_set"] == "A353")
+    keep_b764 = sum(1 for r in stats_rows if r["keep_set"] == "B764")
+
+    reason_counts: Dict[str, int] = {}
+    for r in stats_rows:
+        reason = r["decision_reason"]
+        reason_counts[reason] = reason_counts.get(reason, 0) + 1
+
+    avg_abs_diff_nc = round(sum(r["abs_diff_n_consensus"] for r in stats_rows) / len(stats_rows), 2) if stats_rows else 0
+    avg_abs_diff_nt = round(sum(r["abs_diff_n_contig"] for r in stats_rows) / len(stats_rows), 2) if stats_rows else 0
+
+    # top winners by largest absolute consensus difference
+    top_diff_rows = sorted(stats_rows, key=lambda x: x["abs_diff_n_consensus"], reverse=True)[:10]
+
+    # ------------------------------------------------------------------
+    # Write summary text
+    # ------------------------------------------------------------------
+    summary_lines = [
+        "Deduplication of overlapping A353/B764 loci",
+        "",
+        f"Sequence root: {seq_root}",
+        f"Number of overlap pairs processed: {len(stats_rows)}",
+        f"Pairs kept as A353: {keep_a353}",
+        f"Pairs kept as B764: {keep_b764}",
+        f"Tie preference: {args.prefer_on_tie}",
+        f"Minimum difference for n_consensus to decide winner: {args.min_diff_n_consensus}",
+        f"Minimum difference for n_contig to decide winner: {args.min_diff_n_contig}",
+        "",
+        "Presence of overlapping loci before deduplication:",
+        f"  Pairs with both consensus FASTAs present: {pairs_with_both_consensus}",
+        f"  Pairs with both contig FASTAs present:    {pairs_with_both_contigs}",
+        f"  Pairs where only A353 was present:        {pairs_only_a353_present}",
+        f"  Pairs where only B764 was present:        {pairs_only_b764_present}",
+        f"  Pairs where neither was present:          {pairs_neither_present}",
+        "",
+        "Decision reasons:",
+    ]
+
+    for reason, n in sorted(reason_counts.items(), key=lambda x: (-x[1], x[0])):
+        summary_lines.append(f"  {reason}: {n}")
+
+    summary_lines.extend([
+        "",
+        "Summary statistics across overlap pairs:",
+        f"  Mean absolute difference in n_consensus: {avg_abs_diff_nc}",
+        f"  Mean absolute difference in n_contig:    {avg_abs_diff_nt}",
+        "",
+        "Whole-locus FASTA actions actually taken:",
+        f"  Losing locus consensus FASTAs moved: {moved_locus_consensus}",
+        f"  Losing locus contig FASTAs moved:    {moved_locus_contigs}",
+        "",
+        "Per-sample FASTA actions actually taken:",
+        f"  samples_consensus files changed: {cons_files_changed}",
+        f"  samples_consensus records removed: {cons_records_removed}",
+        f"  samples_contigs files changed:    {cont_files_changed}",
+        f"  samples_contigs records removed:  {cont_records_removed}",
+        "",
+        "Top 10 overlap pairs by absolute difference in n_consensus:",
+    ])
+
+    for r in top_diff_rows:
+        summary_lines.append(
+            f"  A353 {r['A353_locus']} vs B764 {r['B764_locus']}: "
+            f"A353_n={r['A353_n_consensus']}, B764_n={r['B764_n_consensus']}, "
+            f"|diff|={r['abs_diff_n_consensus']}, keep={r['keep_set']} ({r['decision_reason']})"
+        )
+
+    summary_lines.extend([
+        "",
+        "Backups:",
+        f"  {backup_root}",
+        "",
+        "Main stats file:",
+        f"  {out_csv}",
+    ])
+
+    out_summary = seq_root / "bait_overlap_deduplication_summary.txt"
+    if args.dry_run:
+        print(f"[DRY-RUN] Would write summary file: {out_summary}")
+    else:
+        out_summary.write_text("\n".join(summary_lines) + "\n")
+
+    print("[INFO] Done.")
+    print(f"[INFO] Stats:   {out_csv}")
+    print(f"[INFO] Summary: {out_summary}")
+
+
+if __name__ == "__main__":
+    main()
