@@ -1,0 +1,30 @@
+Per-cell min length fraction applied before filtering: 0.25
+
+Dataset optimisation: Samples and loci removed to reduce missing data
+
+0 samples failed completely (SNPs all NA AND lengths all NA or zero):
+
+
+0 samples are below the threshold (0.01) for proportion of recovered loci:
+
+0 samples are below the threshold (0.01) for recovered target sequence length
+
+In total 0 samples were removed:
+
+
+0 loci failed completely (SNPs all NA):
+
+
+4 loci are below the threshold (0.2) for proportion of recovered samples:
+5260	0.045
+6389	0.025
+6559	0.029
+6962	0.009
+
+0 loci are below the threshold (0.2) for proportion of recovered target sequence length:
+
+In total 4 loci were removed:
+5260
+6389
+6559
+6962
