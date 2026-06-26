@@ -54,8 +54,6 @@
 
 # 1. Prepare paths, output directories, and packages -----------------------
 
-wd <- "~/Google Drive/My Drive/Publications/2026_Hendriks_et_al_BrassiWood/BrassiWood"
-setwd(wd)
 
 out_dir <- "WP2_BrassiNiche/results_final/1_niche_modelling_preparation"
 dir.create(out_dir, recursive = TRUE, showWarnings = FALSE)
