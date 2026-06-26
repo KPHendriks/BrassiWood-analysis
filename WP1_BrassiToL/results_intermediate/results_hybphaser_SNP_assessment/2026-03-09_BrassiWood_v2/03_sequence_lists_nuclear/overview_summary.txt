@@ -1,0 +1,34 @@
+Samples included: 3092 / 3092
+Samples removed globally (missing-data thresholds from 1b): 0
+
+Global locus removals (applied to all samples):
+  failed_loci (all-NA after cleaning): 0
+  outloci_missing (missing-data thresholds): 4
+  outloci_para_all (global paralogs): 25
+  union removed (failed + missing + paralogs_all): 29
+
+Per-sample paralog removals (counts per sample):
+  unique loci flagged by HybPhaser across samples: 1088
+  unique loci flagged by HybPiper  across samples: 981
+  unique loci flagged by union (HybPhaser ∪ HybPiper): 1114
+  Top 10 samples by union paralogs:
+  SRR24128551	union=806	(hybphaser=0, hybpiper=806)
+  S2764	union=768	(hybphaser=15, hybpiper=768)
+  S1957	union=759	(hybphaser=7, hybpiper=759)
+  23R64	union=755	(hybphaser=95, hybpiper=738)
+  23R12	union=703	(hybphaser=1, hybpiper=703)
+  S0346	union=693	(hybphaser=22, hybpiper=692)
+  S1774	union=683	(hybphaser=8, hybpiper=682)
+  S1792	union=678	(hybphaser=11, hybpiper=676)
+  S2425	union=669	(hybphaser=17, hybpiper=664)
+  S0295	union=654	(hybphaser=18, hybpiper=650)
+
+Outputs written:
+  per-locus consensus FASTAs: 1088
+  per-locus contig FASTAs   : 1088
+  per-sample consensus FASTAs: 3092
+  per-sample contig FASTAs   : 3092
+
+Missing input files (per-sample):
+  consensus missing: 0
+  contig missing   : 0

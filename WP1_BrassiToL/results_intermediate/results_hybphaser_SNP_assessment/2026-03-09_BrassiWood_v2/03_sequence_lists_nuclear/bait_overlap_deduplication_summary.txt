@@ -1,0 +1,53 @@
+Deduplication of overlapping A353/B764 loci
+
+Sequence root: WP1_BrassiToL/results_intermediate/results_hybphaser_SNP_assessment/03_sequence_lists_nuclear
+Number of overlap pairs processed: 36
+Pairs kept as A353: 20
+Pairs kept as B764: 16
+Tie preference: B764
+Minimum difference for n_consensus to decide winner: 50
+Minimum difference for n_contig to decide winner: 50
+
+Presence of overlapping loci before deduplication:
+  Pairs with both consensus FASTAs present: 36
+  Pairs with both contig FASTAs present:    36
+  Pairs where only A353 was present:        0
+  Pairs where only B764 was present:        0
+  Pairs where neither was present:          0
+
+Decision reasons:
+  A353_higher_n_consensus: 17
+  B764_higher_n_consensus: 16
+  A353_higher_mean_len_consensus: 3
+
+Summary statistics across overlap pairs:
+  Mean absolute difference in n_consensus: 389.81
+  Mean absolute difference in n_contig:    389.81
+
+Whole-locus FASTA actions actually taken:
+  Losing locus consensus FASTAs moved: 36
+  Losing locus contig FASTAs moved:    36
+
+Per-sample FASTA actions actually taken:
+  samples_consensus files changed: 3092
+  samples_consensus records removed: 82483
+  samples_contigs files changed:    3092
+  samples_contigs records removed:  82483
+
+Top 10 overlap pairs by absolute difference in n_consensus:
+  A353 5528 vs B764 1G17760: A353_n=2954, B764_n=779, |diff|=2175, keep=A353 (A353_higher_n_consensus)
+  A353 5018 vs B764 1G08490: A353_n=2396, B764_n=1452, |diff|=944, keep=A353 (A353_higher_n_consensus)
+  A353 6717 vs B764 5G18570: A353_n=2926, B764_n=2037, |diff|=889, keep=A353 (A353_higher_n_consensus)
+  A353 6176 vs B764 5G64050: A353_n=2541, B764_n=1676, |diff|=865, keep=A353 (A353_higher_n_consensus)
+  A353 5398 vs B764 3G20780: A353_n=2875, B764_n=2167, |diff|=708, keep=A353 (A353_higher_n_consensus)
+  A353 5664 vs B764 1G07010: A353_n=2472, B764_n=1768, |diff|=704, keep=A353 (A353_higher_n_consensus)
+  A353 6961 vs B764 4G02790: A353_n=2668, B764_n=1998, |diff|=670, keep=A353 (A353_higher_n_consensus)
+  A353 5257 vs B764 1G43860: A353_n=2377, B764_n=1747, |diff|=630, keep=A353 (A353_higher_n_consensus)
+  A353 6572 vs B764 2G21280: A353_n=2580, B764_n=1960, |diff|=620, keep=A353 (A353_higher_n_consensus)
+  A353 5699 vs B764 5G17290: A353_n=2663, B764_n=2075, |diff|=588, keep=A353 (A353_higher_n_consensus)
+
+Backups:
+  WP1_BrassiToL/results_intermediate/results_hybphaser_SNP_assessment/03_sequence_lists_nuclear/_dedup_overlap_backups
+
+Main stats file:
+  WP1_BrassiToL/results_intermediate/results_hybphaser_SNP_assessment/03_sequence_lists_nuclear/bait_overlap_deduplication_stats.csv
