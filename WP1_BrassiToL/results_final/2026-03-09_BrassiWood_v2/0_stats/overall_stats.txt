@@ -1,0 +1,7 @@
+Files parsed: 1052
+Internal branches (sum): 2539015
+Zero aLRT (sum): 1233035 (48.56%)
+Low SH-aLRT < 70.0 (sum): 1424548 (56.11%)
+Low UFBoot < 80.0 (sum): 1167241 (45.97%)
+Short internal branches < 1e-05 (sum): 1042497 (41.06%)
+Passing all criteria (≥aLRT 70.0, ≥UFBoot 80.0, ≥BL 1e-05): 914265 (36.01%)
