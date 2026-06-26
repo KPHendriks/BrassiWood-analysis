@@ -1,0 +1,17 @@
+[START] Mon Apr 13 08:32:32 AM CEST 2026
+[INFO] STEP 8 setup
+[INFO] Number of selected loci copied: 25
+[INFO] Candidate table: /data/KasperHendriks/BrassiWood/WP1_BrassiToL/results_final/2026-03-09_BrassiWood_v2/8_results_species_tree_calibrated/mcmctree_25loci_sortadate/02_sortadate/03_results/candidate_loci.tsv
+[INFO] Candidate failure table: /data/KasperHendriks/BrassiWood/WP1_BrassiToL/results_final/2026-03-09_BrassiWood_v2/8_results_species_tree_calibrated/mcmctree_25loci_sortadate/02_sortadate/03_results/candidate_loci_failures.tsv
+[INFO] Species tree used for coverage checks: /data/KasperHendriks/BrassiWood/WP1_BrassiToL/results_final/2026-03-09_BrassiWood_v2/8_results_species_tree_calibrated/mcmctree_25loci_sortadate/02_sortadate/03_results/astral_clean_topology_ingroup.nwk
+[INFO] Lightweight ranking file: /data/KasperHendriks/BrassiWood/WP1_BrassiToL/results_final/2026-03-09_BrassiWood_v2/8_results_species_tree_calibrated/mcmctree_25loci_sortadate/02_sortadate/03_results/sortadate_lightweight_good
+[INFO] Final selected loci table: /data/KasperHendriks/BrassiWood/WP1_BrassiToL/results_final/2026-03-09_BrassiWood_v2/8_results_species_tree_calibrated/mcmctree_25loci_sortadate/02_sortadate/03_results/selected_loci.tsv
+[INFO] Selection coverage table: /data/KasperHendriks/BrassiWood/WP1_BrassiToL/results_final/2026-03-09_BrassiWood_v2/8_results_species_tree_calibrated/mcmctree_25loci_sortadate/02_sortadate/03_results/selected_loci_coverage_progress.tsv
+[INFO] Uncovered taxa table: /data/KasperHendriks/BrassiWood/WP1_BrassiToL/results_final/2026-03-09_BrassiWood_v2/8_results_species_tree_calibrated/mcmctree_25loci_sortadate/02_sortadate/03_results/uncovered_taxa_after_selection.tsv
+[INFO] PAML seqfile written to: /data/KasperHendriks/BrassiWood/WP1_BrassiToL/results_final/2026-03-09_BrassiWood_v2/8_results_species_tree_calibrated/mcmctree_25loci_sortadate/03_selected_loci/mcmctree_25loci.phy
+[INFO] Starting MCMCtree usedata=3 prep-only run (baseml intentionally hidden)...
+[INFO] Locus-specific job directories created in: /data/KasperHendriks/BrassiWood/WP1_BrassiToL/results_final/2026-03-09_BrassiWood_v2/8_results_species_tree_calibrated/mcmctree_25loci_sortadate/05_locus_jobs
+[INFO] Job list written to: /data/KasperHendriks/BrassiWood/WP1_BrassiToL/results_final/2026-03-09_BrassiWood_v2/8_results_species_tree_calibrated/mcmctree_25loci_sortadate/locus_jobdirs.txt
+[INFO] Running all usedata=2 chains in parallel (max jobs = 20)...
+[INFO] Running all usedata=2 chains in parallel (max jobs = 20)...
+[INFO] Number of replicate jobs to run: 20
